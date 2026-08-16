@@ -1,6 +1,8 @@
 package com.example.data.repository
 
+import android.content.ContentUris
 import android.content.Context
+import android.provider.MediaStore
 import com.example.data.Song
 import com.example.data.api.JioSaavnClient
 import com.example.data.database.*
@@ -9,7 +11,7 @@ import kotlinx.coroutines.flow.map
 import java.util.Locale
 import android.util.Log
 
-class SongRepository(context: Context) {
+class SongRepository(private val context: Context) {
 
     private val db = AppDatabase.getDatabase(context)
     private val dao = db.songDao()
@@ -695,5 +697,80 @@ In other words, I love you...""",
             mood = mood,
             energy = energy
         )
+    }
+
+    fun scanDeviceAudio(): List<Song> {
+        val songList = mutableListOf<Song>()
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.YEAR,
+            MediaStore.Audio.Media.ALBUM_ID
+        )
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
+
+        try {
+            val cursor = context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                null,
+                sortOrder
+            )
+
+            cursor?.use {
+                val idCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val titleCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+                val artistCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                val albumCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+                val durCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+                val dataCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+                val yearCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
+                val albumIdCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+
+                while (it.moveToNext()) {
+                    val id = it.getLong(idCol)
+                    val title = it.getString(titleCol) ?: "Unknown Track"
+                    val artist = it.getString(artistCol) ?: "Unknown Artist"
+                    val album = it.getString(albumCol) ?: "Unknown Album"
+                    val durationMs = it.getLong(durCol)
+                    val data = it.getString(dataCol) ?: ""
+                    val year = it.getString(yearCol) ?: "2024"
+                    val albumId = it.getLong(albumIdCol)
+
+                    val artworkUri = "content://media/external/audio/albumart/$albumId"
+                    val contentUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id).toString()
+
+                    if (durationMs > 5000) { // filter out ultra short clips
+                        songList.add(
+                            Song(
+                                title = title,
+                                artist = artist,
+                                album = album,
+                                durationSeconds = (durationMs / 1000).toInt(),
+                                genre = "Device Audio",
+                                releaseYear = year,
+                                lyrics = "Local offline audio file from your device storage.",
+                                trivia = "Played directly from device storage.",
+                                coverUrl = artworkUri,
+                                audioUrl = if (data.isNotBlank()) data else contentUri,
+                                source = "Device",
+                                tempoBpm = 120,
+                                mood = "Local",
+                                energy = 0.7f
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SongRepository", "Failed to scan device audio: ${e.localizedMessage}")
+        }
+        return songList
     }
 }

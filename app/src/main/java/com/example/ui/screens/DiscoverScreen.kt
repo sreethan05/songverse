@@ -10,9 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,9 +39,10 @@ fun DiscoverScreen(
     val albumArtStyle by viewModel.albumArtStyle.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
 
-    // Observe songs from searchResults state flow
-    val staticSongs by viewModel.searchResults.collectAsState()
-    val genres = listOf("Pop", "Rock", "Synthwave", "Jazz", "Classical")
+    // Observe rich discover songs catalog
+    val discoverSongs by viewModel.discoverSongs.collectAsState()
+    var selectedGenre by remember { mutableStateOf("All") }
+    val genres = listOf("All", "Bollywood", "Punjabi", "Pop", "Rock", "Synthwave", "Jazz", "Classical")
 
     LazyColumn(
         modifier = modifier
@@ -121,7 +120,7 @@ fun DiscoverScreen(
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.height(12.dp))
-            val spotlightSong = staticSongs.firstOrNull { it.title == "Bohemian Rhapsody" } ?: staticSongs.firstOrNull()
+            val spotlightSong = discoverSongs.firstOrNull { it.title.contains("Kesariya", ignoreCase = true) } ?: discoverSongs.firstOrNull()
             if (spotlightSong != null) {
                 Box(
                     modifier = Modifier
@@ -137,7 +136,7 @@ fun DiscoverScreen(
                             )
                         }
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { viewModel.playSong(spotlightSong, staticSongs) }
+                        .clickable { viewModel.playSong(spotlightSong, discoverSongs) }
                         .padding(16.dp)
                 ) {
                     Row(
@@ -160,49 +159,28 @@ fun DiscoverScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = spotlightSong.title,
-                                fontSize = 16.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = spotlightSong.artist,
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = NeonCyan.copy(alpha = 0.12f),
-                                modifier = Modifier.wrapContentSize()
-                            ) {
-                                Text(
-                                    text = spotlightSong.genre.uppercase(),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = NeonCyan,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
+                            Text(
+                                text = spotlightSong.artist,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
-                        // Play Action
-                        IconButton(
-                            onClick = { viewModel.playSong(spotlightSong, staticSongs) },
-                            modifier = Modifier
-                                .testTag("spotlight_play_button")
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(NeonCyan)
-                        ) {
+                        IconButton(onClick = { viewModel.toggleFavorite(spotlightSong) }) {
+                            val isFav = favorites.any { it.title == spotlightSong.title && it.artist == spotlightSong.artist }
                             Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Play Spotlight",
-                                tint = DarkBg,
-                                modifier = Modifier.size(28.dp)
+                                imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = if (isFav) NeonMagenta else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -214,45 +192,35 @@ fun DiscoverScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    text = "Explore Genres",
-                    fontSize = 18.sp,
+                    text = "Explore Genres & Moods",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(end = 16.dp)
                 ) {
                     items(genres) { genre ->
-                        val matchingSongs = staticSongs.filter { it.genre.contains(genre, ignoreCase = true) }
-                        val bgGradient = when (genre) {
-                            "Pop" -> Brush.verticalGradient(listOf(Color(0xFFE91E63), Color(0xFF9C27B0)))
-                            "Rock" -> Brush.verticalGradient(listOf(Color(0xFFFF5722), Color(0xFF3F51B5)))
-                            "Synthwave" -> Brush.verticalGradient(listOf(NeonMagenta, NeonPurple))
-                            "Jazz" -> Brush.verticalGradient(listOf(Color(0xFF009688), Color(0xFF004D40)))
-                            else -> Brush.verticalGradient(listOf(NeonCyan, Color(0xFF1E3C72)))
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .width(120.dp)
-                                .height(80.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(bgGradient)
-                                .clickable {
-                                    if (matchingSongs.isNotEmpty()) {
-                                        viewModel.playSong(matchingSongs.first(), matchingSongs)
-                                    }
-                                }
-                                .padding(12.dp),
-                            contentAlignment = Alignment.BottomStart
+                        val isSelected = selectedGenre.equals(genre, ignoreCase = true)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            ),
+                            modifier = Modifier.clickable {
+                                selectedGenre = genre
+                            }
                         ) {
                             Text(
                                 text = genre,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
@@ -280,9 +248,9 @@ fun DiscoverScreen(
                         )
                         Text(
                             text = "Recently Played",
-                            fontSize = 18.sp,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
 
@@ -310,15 +278,25 @@ fun DiscoverScreen(
 
         // --- 5. Top Chartbusters & Global Hits Shelf ---
         item {
+            val displayedSongs = if (selectedGenre == "All") {
+                discoverSongs
+            } else {
+                discoverSongs.filter {
+                    it.genre.contains(selectedGenre, ignoreCase = true) ||
+                    it.title.contains(selectedGenre, ignoreCase = true) ||
+                    it.artist.contains(selectedGenre, ignoreCase = true)
+                }
+            }
+
             Text(
-                text = "Top Chartbusters & Global Hits",
+                text = if (selectedGenre == "All") "Top Chartbusters & Global Hits (${displayedSongs.size})" else "$selectedGenre Hits (${displayedSongs.size})",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(12.dp))
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                staticSongs.forEach { song ->
+                displayedSongs.forEach { song ->
                     val isFav = favorites.any { it.title == song.title && it.artist == song.artist }
                     SongRow(
                         song = song,
@@ -328,7 +306,7 @@ fun DiscoverScreen(
                         style = albumArtStyle,
                         isPlaying = isPlaying,
                         onClick = {
-                            viewModel.playSong(song, staticSongs)
+                            viewModel.playSong(song, displayedSongs)
                         }
                     )
                 }

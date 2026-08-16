@@ -42,15 +42,24 @@ fun LibraryScreen(
 ) {
     val favorites by viewModel.favorites.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
+    val discoverSongs by viewModel.discoverSongs.collectAsState()
+    val deviceSongs by viewModel.deviceSongs.collectAsState()
+    val isScanningDevice by viewModel.isScanningDevice.collectAsState()
     val selectedPlaylist by viewModel.selectedPlaylist.collectAsState()
     val selectedPlaylistSongs by viewModel.selectedPlaylistSongs.collectAsState()
     val albumArtStyle by viewModel.albumArtStyle.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
 
-    var activeTab by remember { mutableStateOf(0) } // 0 = Favorites, 1 = Playlists
+    var activeTab by remember { mutableStateOf(0) } // 0 = All Songs, 1 = Favorites, 2 = Playlists
+    var allSongsFilter by remember { mutableStateOf(0) } // 0 = All, 1 = Online, 2 = Device
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var showImportPlaylistDialog by remember { mutableStateOf(false) }
     val importState by viewModel.importState.collectAsState()
+
+    // Combined all library songs
+    val allLibrarySongs = remember(discoverSongs, deviceSongs) {
+        (deviceSongs + discoverSongs).distinctBy { "${it.title.lowercase().trim()}-${it.artist.lowercase().trim()}" }
+    }
 
     // Manage back button navigation inside Library Screen when a playlist is open
     if (selectedPlaylist != null) {
@@ -68,24 +77,79 @@ fun LibraryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp, bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TabHeaderButton(
-                        text = "Favorites",
+                        text = "All Songs",
                         isActive = activeTab == 0,
                         onClick = { activeTab = 0 },
-                        badgeCount = favorites.size
+                        badgeCount = allLibrarySongs.size,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    TabHeaderButton(
+                        text = "Favorites",
+                        isActive = activeTab == 1,
+                        onClick = { activeTab = 1 },
+                        badgeCount = favorites.size,
+                        modifier = Modifier.weight(1f)
                     )
 
                     TabHeaderButton(
                         text = "Playlists",
-                        isActive = activeTab == 1,
-                        onClick = { activeTab = 1 },
-                        badgeCount = playlists.size
+                        isActive = activeTab == 2,
+                        onClick = { activeTab = 2 },
+                        badgeCount = playlists.size,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
-                if (activeTab == 1) {
+                if (activeTab == 0) {
+                    // All Songs Filter Bar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = allSongsFilter == 0,
+                                onClick = { allSongsFilter = 0 },
+                                label = { Text("All (${allLibrarySongs.size})", style = MaterialTheme.typography.labelSmall) }
+                            )
+                            FilterChip(
+                                selected = allSongsFilter == 1,
+                                onClick = { allSongsFilter = 1 },
+                                label = { Text("Online (${discoverSongs.size})", style = MaterialTheme.typography.labelSmall) }
+                            )
+                            FilterChip(
+                                selected = allSongsFilter == 2,
+                                onClick = { allSongsFilter = 2 },
+                                label = { Text("Device (${deviceSongs.size})", style = MaterialTheme.typography.labelSmall) }
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { viewModel.scanDeviceMusic() },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            if (isScanningDevice) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Scan Device Audio",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (activeTab == 2) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier
@@ -117,59 +181,100 @@ fun LibraryScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Box(modifier = Modifier.weight(1f)) {
-                    if (activeTab == 0) {
-                        // --- FAVORITES LIST ---
-                        if (favorites.isEmpty()) {
-                            EmptyLibraryState(
-                                icon = Icons.Default.FavoriteBorder,
-                                title = "Your Favorites is Empty",
-                                description = "Tap the heart icon in the player or search to save songs here."
-                            )
-                        } else {
-                            LazyColumn(
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                contentPadding = PaddingValues(bottom = 120.dp),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                items(favorites) { song ->
-                                    LibrarySongRow(
-                                        song = song,
-                                        style = albumArtStyle,
-                                        isPlaying = isPlaying,
-                                        isPlayingNow = viewModel.currentPlayingSong.value?.title == song.title,
-                                        actionIcon = Icons.Default.Favorite,
-                                        actionIconTint = NeonMagenta,
-                                        onActionClick = { viewModel.toggleFavorite(song) },
-                                        onPlay = { viewModel.playSong(song, favorites) }
-                                    )
+                    when (activeTab) {
+                        0 -> {
+                            // --- ALL SONGS LIST ---
+                            val displayedList = when (allSongsFilter) {
+                                1 -> discoverSongs
+                                2 -> deviceSongs
+                                else -> allLibrarySongs
+                            }
+
+                            if (displayedList.isEmpty()) {
+                                EmptyLibraryState(
+                                    icon = Icons.Default.MusicNote,
+                                    title = if (allSongsFilter == 2) "No Device Songs Found" else "No Songs Available",
+                                    description = if (allSongsFilter == 2) "Tap the refresh button to scan your phone's storage for audio files." else "Loading songs catalog..."
+                                )
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    contentPadding = PaddingValues(bottom = 120.dp),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(displayedList) { song ->
+                                        val isFav = favorites.any { it.title == song.title && it.artist == song.artist }
+                                        LibrarySongRow(
+                                            song = song,
+                                            style = albumArtStyle,
+                                            isPlaying = isPlaying,
+                                            isPlayingNow = viewModel.currentPlayingSong.value?.title == song.title,
+                                            actionIcon = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            actionIconTint = if (isFav) NeonMagenta else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            onActionClick = { viewModel.toggleFavorite(song) },
+                                            onPlay = { viewModel.playSong(song, displayedList) }
+                                        )
+                                    }
                                 }
                             }
                         }
-                    } else {
-                        // --- PLAYLISTS GRID/LIST ---
-                        if (playlists.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize()) {
+
+                        1 -> {
+                            // --- FAVORITES LIST ---
+                            if (favorites.isEmpty()) {
                                 EmptyLibraryState(
-                                    icon = Icons.Default.QueueMusic,
-                                    title = "No Playlists Yet",
-                                    description = "Create your custom soundtracks. Click the floating button below to begin!"
+                                    icon = Icons.Default.FavoriteBorder,
+                                    title = "Your Favorites is Empty",
+                                    description = "Tap the heart icon in the player or search to save songs here."
                                 )
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(bottom = 120.dp),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(favorites) { song ->
+                                        LibrarySongRow(
+                                            song = song,
+                                            style = albumArtStyle,
+                                            isPlaying = isPlaying,
+                                            isPlayingNow = viewModel.currentPlayingSong.value?.title == song.title,
+                                            actionIcon = Icons.Default.Favorite,
+                                            actionIconTint = NeonMagenta,
+                                            onActionClick = { viewModel.toggleFavorite(song) },
+                                            onPlay = { viewModel.playSong(song, favorites) }
+                                        )
+                                    }
+                                }
                             }
-                        } else {
-                            LazyColumn(
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                contentPadding = PaddingValues(bottom = 120.dp),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                items(playlists) { playlist ->
-                                    PlaylistRow(
-                                        playlist = playlist,
-                                        onClick = { viewModel.selectPlaylist(playlist) },
-                                        onDelete = { viewModel.deletePlaylist(playlist.id) }
+                        }
+
+                        else -> {
+                            // --- PLAYLISTS GRID/LIST ---
+                            if (playlists.isEmpty()) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    EmptyLibraryState(
+                                        icon = Icons.Default.QueueMusic,
+                                        title = "No Playlists Yet",
+                                        description = "Create your custom soundtracks. Click the floating button below to begin!"
                                     )
+                                }
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(bottom = 120.dp),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(playlists) { playlist ->
+                                        PlaylistRow(
+                                            playlist = playlist,
+                                            onClick = { viewModel.selectPlaylist(playlist) },
+                                            onDelete = { viewModel.deletePlaylist(playlist.id) }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -179,7 +284,7 @@ fun LibraryScreen(
 
             // Create Playlist FAB
             AnimatedVisibility(
-                visible = activeTab == 1,
+                visible = activeTab == 2,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier
@@ -655,14 +760,15 @@ fun TabHeaderButton(
     text: String,
     isActive: Boolean,
     onClick: () -> Unit,
-    badgeCount: Int
+    badgeCount: Int,
+    modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(if (isActive) NeonPurple.copy(alpha = 0.25f) else Color.Transparent)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

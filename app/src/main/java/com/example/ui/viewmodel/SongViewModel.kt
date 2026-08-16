@@ -80,6 +80,14 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchResults = MutableStateFlow<List<Song>>(emptyList())
     val searchResults: StateFlow<List<Song>> = _searchResults.asStateFlow()
 
+    private val _discoverSongs = MutableStateFlow<List<Song>>(repository.preloadedSongs)
+    val discoverSongs: StateFlow<List<Song>> = _discoverSongs.asStateFlow()
+
+    private val _deviceSongs = MutableStateFlow<List<Song>>(emptyList())
+    val deviceSongs: StateFlow<List<Song>> = _deviceSongs.asStateFlow()
+
+    private val _isScanningDevice = MutableStateFlow(false)
+    val isScanningDevice: StateFlow<Boolean> = _isScanningDevice.asStateFlow()
 
     private val _searchError = MutableStateFlow<String?>(null)
     val searchError: StateFlow<String?> = _searchError.asStateFlow()
@@ -342,18 +350,28 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             // ignore
         }
 
-        // Automatically load preloaded songs / trending songs into Search Results initially
+        // Initialize Discover and Search with rich preloaded library
+        _discoverSongs.value = repository.preloadedSongs
         _searchResults.value = repository.preloadedSongs
+
+        // Concurrently fetch trending world hits and merge into discover & search
         viewModelScope.launch {
             try {
                 val trending = repository.fetchTrendingWorldSongs()
                 if (trending.isNotEmpty()) {
-                    _searchResults.value = trending
+                    val combined = (repository.preloadedSongs + trending).distinctBy {
+                        "${it.title.lowercase().trim()}-${it.artist.lowercase().trim()}"
+                    }
+                    _discoverSongs.value = combined
+                    _searchResults.value = combined
                 }
             } catch (e: Exception) {
-                // Keep preloaded
+                // Keep preloaded library
             }
         }
+
+        // Scan local device audio on startup
+        scanDeviceMusic()
 
         // Automatically load detailed info and extract Coil dominant color when current song changes
         viewModelScope.launch {
@@ -375,6 +393,20 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    fun scanDeviceMusic() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isScanningDevice.value = true
+            try {
+                val songs = repository.scanDeviceAudio()
+                _deviceSongs.value = songs
+            } catch (e: Exception) {
+                Log.e("SongViewModel", "Failed to scan device audio: ${e.localizedMessage}")
+            } finally {
+                _isScanningDevice.value = false
             }
         }
     }

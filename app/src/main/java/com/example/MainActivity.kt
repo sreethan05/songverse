@@ -47,6 +47,24 @@ class MainActivity : ComponentActivity() {
             val isDarkTheme by viewModel.isDarkTheme.collectAsState()
             val selectedTheme by viewModel.selectedTheme.collectAsState()
 
+            // Request Audio Storage Permission automatically for device music
+            val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                if (permissions.values.any { it }) {
+                    viewModel.scanDeviceMusic()
+                }
+            }
+
+            LaunchedEffect(Unit) {
+                val permissionsToRequest = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    arrayOf(android.Manifest.permission.READ_MEDIA_AUDIO)
+                } else {
+                    arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                }
+                permissionLauncher.launch(permissionsToRequest)
+            }
+
             MyApplicationTheme(
                 darkTheme = isDarkTheme,
                 themePreset = selectedTheme
