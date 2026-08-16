@@ -1,0 +1,18 @@
+{
+  "name": "songverse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SongVerse - AI-Powered Music Discovery, Streaming, Synced Lyrics & Audio Visualizers",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide": "^0.460.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}

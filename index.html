@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SongVerse - Discover, Stream & Visualize Music</title>
+  <meta name="description" content="Discover and stream millions of songs worldwide with AI-powered search, synchronized lyrics, audio visualizers, and customized vibes.">
+
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/src/index.css">
+</head>
+<body class="theme-CYBERPUNK">
+  <div id="app">
+
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-row-1">
+        <div class="brand-logo" id="brand-logo-btn">
+          <div class="logo-badge">
+            <i data-lucide="music-2"></i>
+          </div>
+          <span class="brand-title">SONGVERSE</span>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn-icon" id="theme-btn" title="Choose Theme Vibe">
+            <i data-lucide="palette"></i>
+          </button>
+          <button class="btn-primary" id="open-player-modal-btn">
+            <i data-lucide="sparkles"></i>
+            <span>Visualizer</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Search Bar -->
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <i data-lucide="search"></i>
+          <input type="text" id="global-search-input" class="search-input" placeholder="Search any song, artist, or album in the world (e.g. Taylor Swift, Queen, Arijit Singh)..." autocomplete="off">
+          <button id="search-clear-btn" class="search-clear" title="Clear">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Nav Tabs -->
+      <nav class="nav-tabs">
+        <button class="nav-tab-btn active" data-tab="discover">
+          <i data-lucide="compass"></i>
+          <span>Discover</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="search">
+          <i data-lucide="search"></i>
+          <span>Search</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="library">
+          <i data-lucide="library"></i>
+          <span>Library</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+
+      <!-- 1. DISCOVER VIEW -->
+      <section id="view-discover" class="view-section active">
+        <!-- Trending Now -->
+        <div class="section-header">
+          <h2 class="section-title">
+            <i data-lucide="flame"></i>
+            <span>Trending Worldwide</span>
+          </h2>
+        </div>
+        <div class="song-grid" id="trending-grid">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Genres & Vibes -->
+        <div class="section-header">
+          <h2 class="section-title">
+            <i data-lucide="radio"></i>
+            <span>Explore Genres & Moods</span>
+          </h2>
+        </div>
+        <div class="genre-grid" id="genres-grid">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- 2. SEARCH VIEW -->
+      <section id="view-search" class="view-section">
+        <!-- Recent Searches Chips -->
+        <div id="recent-searches-wrap" style="margin-bottom: 20px;">
+          <div class="section-header">
+            <h3 style="font-size: 1rem; color: var(--color-text-secondary);">Recent Searches</h3>
+            <button id="clear-recents-btn" style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.8rem;">Clear</button>
+          </div>
+          <div id="recent-chips" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+        </div>
+
+        <div class="section-header">
+          <h2 class="section-title">
+            <i data-lucide="list-music"></i>
+            <span id="search-results-title">Catalog Tracks</span>
+          </h2>
+          <span id="search-count" style="font-size: 0.85rem; color: var(--color-text-muted);"></span>
+        </div>
+        <div class="song-list-container" id="search-list-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- 3. LIBRARY VIEW -->
+      <section id="view-library" class="view-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <i data-lucide="heart"></i>
+            <span>Liked Songs</span>
+          </h2>
+          <span id="favorites-count" style="font-size: 0.85rem; color: var(--color-text-muted);">0 songs</span>
+        </div>
+        <div class="song-list-container" id="favorites-list-container" style="margin-bottom: 32px;">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Custom Playlists -->
+        <div class="section-header">
+          <h2 class="section-title">
+            <i data-lucide="folder-music"></i>
+            <span>Your Playlists</span>
+          </h2>
+          <button class="btn-primary" id="new-playlist-btn" style="padding: 6px 14px; font-size: 0.85rem;">
+            <i data-lucide="plus"></i>
+            <span>New Playlist</span>
+          </button>
+        </div>
+        <div class="song-grid" id="playlists-grid" style="margin-bottom: 32px;">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Listening History -->
+        <div class="section-header">
+          <h2 class="section-title">
+            <i data-lucide="history"></i>
+            <span>Recently Played</span>
+          </h2>
+          <button id="clear-history-btn" style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.8rem;">Clear History</button>
+        </div>
+        <div class="song-list-container" id="history-list-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Persistent Audio Player -->
+    <div class="bottom-player" id="bottom-player">
+      <!-- Left Track Info -->
+      <div class="player-left" id="player-left-toggle">
+        <div class="player-art-wrap">
+          <img id="player-art" class="player-art-img" src="https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/58/2b/a0/582ba0bb-80d0-080e-ec97-3f30d32c5fbe/00602547500366.rgb.jpg/600x600bb.jpg" alt="Artwork">
+        </div>
+        <div class="player-info-wrap">
+          <div id="player-title" class="player-title">Bohemian Rhapsody</div>
+          <div id="player-artist" class="player-artist">Queen</div>
+        </div>
+        <button id="player-heart-btn" class="card-heart-btn" title="Like">
+          <i data-lucide="heart"></i>
+        </button>
+      </div>
+
+      <!-- Center Controls & Progress -->
+      <div class="player-center">
+        <div class="player-controls">
+          <button id="ctrl-shuffle" class="ctrl-btn" title="Shuffle">
+            <i data-lucide="shuffle"></i>
+          </button>
+          <button id="ctrl-prev" class="ctrl-btn" title="Previous">
+            <i data-lucide="skip-back"></i>
+          </button>
+          <button id="ctrl-play" class="ctrl-btn ctrl-btn-play" title="Play / Pause">
+            <i data-lucide="play" id="play-icon"></i>
+          </button>
+          <button id="ctrl-next" class="ctrl-btn" title="Next">
+            <i data-lucide="skip-forward"></i>
+          </button>
+          <button id="ctrl-repeat" class="ctrl-btn" title="Repeat">
+            <i data-lucide="repeat"></i>
+          </button>
+        </div>
+
+        <div class="progress-row">
+          <span id="time-current" class="time-label">0:00</span>
+          <div class="progress-bar-container" id="seek-bar-container">
+            <div class="progress-bar-fill" id="seek-bar-fill"></div>
+          </div>
+          <span id="time-duration" class="time-label">5:54</span>
+        </div>
+      </div>
+
+      <!-- Right Volume & Expander -->
+      <div class="player-right">
+        <div class="volume-slider-wrap">
+          <i data-lucide="volume-2" style="color: var(--color-text-muted); width: 18px;"></i>
+          <input type="range" id="volume-slider" class="volume-slider" min="0" max="1" step="0.01" value="0.8">
+        </div>
+        <button id="expand-player-btn" class="btn-icon" title="Expand Full Visualizer & Lyrics">
+          <i data-lucide="maximize-2"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Full Screen Player & Visualizer Modal -->
+    <div class="full-player-modal" id="full-player-modal">
+      <div class="full-player-header">
+        <button id="close-player-modal-btn" class="btn-icon" title="Minimize">
+          <i data-lucide="chevron-down"></i>
+        </button>
+        <div style="text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--color-accent); font-weight: 700; letter-spacing: 1px;">PLAYING FROM SONGVERSE</div>
+          <div id="modal-track-name" style="font-size: 1.1rem; font-weight: 800;">Bohemian Rhapsody</div>
+        </div>
+        <button id="modal-heart-btn" class="btn-icon" title="Like">
+          <i data-lucide="heart"></i>
+        </button>
+      </div>
+
+      <div class="full-player-body">
+        <!-- Visualizer Canvas -->
+        <div class="visualizer-canvas-container">
+          <canvas id="visualizer-canvas" class="visualizer-canvas"></canvas>
+          <div class="vis-style-pills">
+            <button class="vis-pill active" data-style="AURA">Aura Flow</button>
+            <button class="vis-pill" data-style="VINYL">Vinyl</button>
+            <button class="vis-pill" data-style="CYBERPUNK">Cyberpunk</button>
+            <button class="vis-pill" data-style="MINIMAL">Studio</button>
+          </div>
+        </div>
+
+        <!-- Lyrics & Song Details -->
+        <div class="lyrics-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="mic-2" style="color: var(--color-accent);"></i>
+              <span>Synchronized Lyrics</span>
+            </h3>
+            <span id="modal-genre-tag" style="font-size: 0.75rem; background: var(--color-surface-hover); padding: 4px 10px; border-radius: var(--radius-full); color: var(--color-text-secondary);">Classic Rock</span>
+          </div>
+
+          <div class="lyrics-scroll-area" id="lyrics-scroll-area">
+            <!-- Lyrics lines rendered dynamically -->
+          </div>
+
+          <!-- Trivia Box -->
+          <div id="song-trivia-box" style="margin-top: 14px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: var(--radius-md); border-left: 3px solid var(--color-accent); font-size: 0.8rem; color: var(--color-text-secondary);">
+            <strong style="color: var(--color-text-primary);">Story: </strong>
+            <span id="song-trivia-text">Written by Freddie Mercury, this operatic rock masterpiece spent 9 weeks at number one in the UK.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Theme Picker Modal -->
+    <div class="modal-overlay" id="theme-modal">
+      <div class="modal-card">
+        <h3 class="modal-title">Choose Theme Vibe</h3>
+        <div class="theme-options-grid">
+          <button class="theme-option-btn" data-theme="CYBERPUNK">
+            <div class="theme-color-dot" style="background: #00F0FF;"></div>
+            <span>Cyberpunk Neon</span>
+          </button>
+          <button class="theme-option-btn" data-theme="OCEAN">
+            <div class="theme-color-dot" style="background: #00E1D9;"></div>
+            <span>Deep Ocean</span>
+          </button>
+          <button class="theme-option-btn" data-theme="SUNSET">
+            <div class="theme-color-dot" style="background: #FFAA00;"></div>
+            <span>Sunset Gold</span>
+          </button>
+          <button class="theme-option-btn" data-theme="FOREST">
+            <div class="theme-color-dot" style="background: #00FF87;"></div>
+            <span>Forest Emerald</span>
+          </button>
+          <button class="theme-option-btn" data-theme="MINIMAL_DARK">
+            <div class="theme-color-dot" style="background: #E2E8F0;"></div>
+            <span>Midnight Studio</span>
+          </button>
+        </div>
+        <button class="btn-primary" id="close-theme-modal-btn" style="width: 100%; justify-content: center;">Done</button>
+      </div>
+    </div>
+
+    <!-- Create Playlist Modal -->
+    <div class="modal-overlay" id="playlist-modal">
+      <div class="modal-card">
+        <h3 class="modal-title">Create New Playlist</h3>
+        <input type="text" id="playlist-name-input" class="search-input" placeholder="Playlist Name (e.g. Late Night Vibes)" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--color-card-border); border-radius: var(--radius-md); margin-bottom: 12px;">
+        <input type="text" id="playlist-desc-input" class="search-input" placeholder="Description (optional)" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--color-card-border); border-radius: var(--radius-md); margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-icon" id="cancel-playlist-btn" style="flex: 1; border-radius: var(--radius-full);">Cancel</button>
+          <button class="btn-primary" id="save-playlist-btn" style="flex: 1; justify-content: center;">Create</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

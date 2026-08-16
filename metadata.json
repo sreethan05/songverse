@@ -1,0 +1,6 @@
+{
+  "name": "SongVerse",
+  "description": "Discover and stream any song in the world with AI-powered search, detailed stories, synchronized lyrics, and responsive canvas visualizers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
